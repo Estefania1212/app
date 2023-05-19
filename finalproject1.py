@@ -76,13 +76,13 @@ import plotly.graph_objs as go
 
 
 # Set the title and image in the sidebar
-st.sidebar.title('STOCK MARKET PREDICTION')
-options = ['STOCK TREND PREDICTION', 'ABOUT', 'UNDERSTANDING THE STOCK MARKET PREDICTOR']
+st.sidebar.title('STOCK MARKET PREDICTION APP')
+options = ['STOCK TREND FORECAST', 'ABOUT THE APP', 'PREDICTOR EXPLAINED']
 selected_option = st.sidebar.selectbox('Select an option', options)
 
 # S&P500 PREDICTION section
-if selected_option == 'STOCK TREND PREDICTION':
-    st.sidebar.subheader('STOCK MARKET PREDICTOR')
+if selected_option == 'STOCK TREND FORECAST':
+    st.sidebar.subheader('STOCK TREND FORECAST')
     ##image = Image.open(r'C:\Users\brill\OneDrive\Documents\DScourse\Streamlit Financial Research app\download (1).jpg')
     ##st.sidebar.image(image, use_column_width=True)
 
@@ -241,9 +241,9 @@ if selected_option == 'STOCK TREND PREDICTION':
     
 
 # ABOUT section
-elif selected_option == 'ABOUT':
-    st.sidebar.subheader('ABOUT')
-    st.title('About')
+elif selected_option == 'ABOUT THE APP':
+    st.sidebar.subheader('ABOUT THE APP')
+    st.title('ABOUT THE APP')
 
     st.write('The stock trend predictor is a powerful tool that utilizes historical stock market data to forecast the future price trend of a specific stock. These predictions can assist investors and traders in making informed decisions and developing effective investment strategies.')
     st.write('Disclaimer: The stock trend predictor is for informational purposes only and should not be considered as financial advice. Investing in the stock market involves risks, and decisions based on the predictions should be made at your own discretion. Always consult with a qualified financial advisor before making any investment decisions.')
@@ -254,9 +254,9 @@ elif selected_option == 'ABOUT':
 
 
 # DEFINITIONS section
-elif selected_option == 'UNDERSTANDING THE STOCK MARKET PREDICTOR':
+elif selected_option == 'PREDICTOR EXPLAINED':
     st.sidebar.subheader('MAIN CONCEPTS')
-    st.title('UNDERSTANDING THE STOCK MARKET PREDICTOR')
+    st.title('PREDICTOR EXPLAINED')
    
 
     
