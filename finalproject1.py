@@ -83,7 +83,7 @@ selected_option = st.sidebar.selectbox('Select an option', options)
 # S&P500 PREDICTION section
 if selected_option == 'STOCK TREND PREDICTION':
     st.sidebar.subheader('STOCK MARKET PREDICTOR')
-    image = Image.open(r'C:\Users\brill\OneDrive\Documents\DScourse\Streamlit Financial Research app\download (1).jpg')
+    ##image = Image.open(r'C:\Users\brill\OneDrive\Documents\DScourse\Streamlit Financial Research app\download (1).jpg')
     st.sidebar.image(image, use_column_width=True)
 
     # Define function to get stock data using Yahoo Finance API
