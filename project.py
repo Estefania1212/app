@@ -180,7 +180,14 @@ if selected_option == 'STOCK TREND FORECAST':
           st.write("Response content:", request.content)
           return None
           
-       data = json_data.get("quoteSummary", {}).get("result", [])[0]
+       #data = json_data.get("quoteSummary", {}).get("result", [])[0]
+       data = None
+       quote_summary = json_data.get("quoteSummary", {})
+       result = quote_summary.get("result", [])
+       if result:
+           data = result[0]
+       else:
+           st.write(f"No data available for ticker: {ticker}")
 
        return data
 
