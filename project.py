@@ -93,10 +93,18 @@ def get_data(ticker, start_date, end_date):
     data.reset_index(inplace=True)
     return data
 
+import yfinance as yf
+
 def get_stock_details(ticker):
-    stock = yf.Ticker(ticker)
-    info = stock.info
-    return info
+    try:
+        stock = yf.Ticker(ticker)
+        info = stock.info
+        return info
+    except Exception as e:
+        return f"Error fetching data: {e}"
+
+stock_data = get_stock_details("AAPL")
+
 
 
 
