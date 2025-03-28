@@ -93,6 +93,13 @@ def get_data(ticker, start_date, end_date):
     data.reset_index(inplace=True)
     return data
 
+def get_stock_details(ticker):
+    stock = yf.Ticker(ticker)
+    info = stock.info
+    return info
+
+
+
 
 # Present Value & Future Value Functions
 def pv(fv, required_rate_of_return, years):
