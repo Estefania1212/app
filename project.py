@@ -72,7 +72,10 @@ import streamlit as st
 from PIL import Image
 import yfinance as yf
 import datetime
+import requests
 import plotly.graph_objs as go
+from prophet import Prophet
+from prophet.plot import plot_plotly
 
 
 # Set the title and image in the sidebar
@@ -80,26 +83,31 @@ st.sidebar.title('STOCK MARKET PREDICTION APP')
 options = ['STOCK TREND FORECAST', 'ABOUT THE APP', 'PREDICTOR EXPLAINED']
 selected_option = st.sidebar.selectbox('Select an option', options)
 
-# S&P500 PREDICTION section
+
+# Function to get stock data
+def get_data(ticker, start_date, end_date):
+    data = yf.download(ticker, start=start_date, end=end_date)
+    if data.empty:
+        st.error("No data found for the given stock ticker. Please try another ticker.")
+        return None
+    data.reset_index(inplace=True)
+    return data
+
+
+# Present Value & Future Value Functions
+def pv(fv, required_rate_of_return, years):
+    return fv / ((1 + required_rate_of_return / 100) ** years)
+
+
+def fv(pv, growth, years):
+    return pv * (1 + growth) ** years
+
+
 if selected_option == 'STOCK TREND FORECAST':
     st.sidebar.subheader('STOCK TREND FORECAST')
-    ##image = Image.open(r'C:\Users\brill\OneDrive\Documents\DScourse\Streamlit Financial Research app\download (1).jpg')
-    ##st.sidebar.image(image, use_column_width=True)
-
-    # Define function to get stock data using Yahoo Finance API
-    def get_data(ticker, start_date, end_date):
-        data = yf.download(ticker, start=start_date, end=end_date)
-        data.reset_index(inplace=True)
-        return data
-    
-    def pv(fv, required_rate_of_return, years):
-       return fv / ((1 + required_rate_of_return / 100) ** years)
-    def fv(pv, growth, years):
-       return pv * (1 + growth) ** years
 
     # Main content
     st.title('Stock Market Predictor')
-
 
     # Get user input from the sidebar
     ticker = st.sidebar.text_input("Enter a stock ticker symbol (e.g. AAPL):", "AAPL")
@@ -107,139 +115,122 @@ if selected_option == 'STOCK TREND FORECAST':
     end_date = datetime.datetime.now().strftime("%Y-%m-%d")
     data = get_data(ticker, start_date, end_date)
 
-    # Display raw data
-    st.subheader('Raw data')
-    st.write(data.tail())
+    if data is not None and not data.empty:
+        # Display raw data
+        st.subheader('Raw Data')
+        st.write(data.tail())
 
-    # Display closing price vs time chart
-    st.subheader('Closing Price vs Time Chart')
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], name='Stock Close'))
-    fig.layout.update(title_text="Time Series Data", xaxis_rangeslider_visible=True)
-    st.plotly_chart(fig)
+        # Closing Price vs Time Chart
+        st.subheader('Closing Price vs Time Chart')
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], name='Stock Close'))
+        fig.layout.update(title_text="Time Series Data", xaxis_rangeslider_visible=True)
+        st.plotly_chart(fig)
 
-    # Display closing price vs time chart with 100-day moving average
-    st.subheader('Closing Price vs Time Chart with 100 MA')
-    ma100 = data.Close.rolling(100).mean()
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=data['Date'], y=ma100, name='100-day Moving Average', line=dict(color='red')))
-    fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], name='Stock Close', line=dict(color='green')))
-    fig.layout.update(title_text="Time Series Data with 100-day Moving Average", xaxis_rangeslider_visible=True)
-    st.plotly_chart(fig)
+        # Closing Price vs Time Chart with 100-day Moving Average
+        st.subheader('Closing Price vs Time Chart with 100 MA')
+        if len(data) >= 100:
+            ma100 = data['Close'].rolling(100).mean()
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=data['Date'], y=ma100, name='100-day Moving Average', line=dict(color='red')))
+            fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], name='Stock Close', line=dict(color='green')))
+            fig.layout.update(title_text="Time Series Data with 100-day Moving Average", xaxis_rangeslider_visible=True)
+            st.plotly_chart(fig)
+        else:
+            st.warning("Not enough data for 100-day Moving Average.")
 
-    # Display closing price vs time chart with 100-day and 200-day moving averages
-    st.subheader('Closing Price vs Time Chart with 100MA & 200MA')
-    ma100 = data.Close.rolling(100).mean()
-    ma200 = data.Close.rolling(200).mean()
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=data['Date'], y=ma100, name='100-day Moving Average', line=dict(color='red')))
-    fig.add_trace(go.Scatter(x=data['Date'], y=ma200, name='200-day Moving Average', line=dict(color='green')))
-    fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], name='Stock Close', line=dict(color='blue')))
-    fig.layout.update(title_text="Time Series Data with 100-day and 200-day Moving Averages", xaxis_rangeslider_visible=True)
-    st.plotly_chart(fig)
+        # Closing Price vs Time Chart with 100-day & 200-day Moving Averages
+        st.subheader('Closing Price vs Time Chart with 100MA & 200MA')
+        if len(data) >= 200:
+            ma100 = data['Close'].rolling(100).mean()
+            ma200 = data['Close'].rolling(200).mean()
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=data['Date'], y=ma100, name='100-day Moving Average', line=dict(color='red')))
+            fig.add_trace(go.Scatter(x=data['Date'], y=ma200, name='200-day Moving Average', line=dict(color='green')))
+            fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], name='Stock Close', line=dict(color='blue')))
+            fig.layout.update(title_text="Time Series Data with 100-day and 200-day Moving Averages", xaxis_rangeslider_visible=True)
+            st.plotly_chart(fig)
+        else:
+            st.warning("Not enough data for 200-day Moving Average.")
 
-    # Get user input for forecasting
-    n_years = st.sidebar.slider("Select the number of years to forecast:", 1, 4)
-    period = n_years * 365
-    df_train = data[['Date', 'Close']].rename(columns={"Date": "ds", "Close": "y"})
-    m = Prophet()
-    m.fit(df_train)
-    future = m.make_future_dataframe(periods=period)
-    forecast = m.predict(future)
+        # Forecasting
+        if len(data) > 30:  # Ensuring at least 30 days of data before forecasting
+            n_years = st.sidebar.slider("Select the number of years to forecast:", 1, 4)
+            period = n_years * 365
+            df_train = data[['Date', 'Close']].rename(columns={"Date": "ds", "Close": "y"})
+            m = Prophet()
+            m.fit(df_train)
+            future = m.make_future_dataframe(periods=period)
+            forecast = m.predict(future)
 
-    st.subheader('Forecast data')
-    st.write(forecast.tail())
+            st.subheader('Forecast Data')
+            st.write(forecast.tail())
 
-    fig1 = plot_plotly(m, forecast)
-    st.plotly_chart(fig1)
+            fig1 = plot_plotly(m, forecast)
+            st.plotly_chart(fig1)
 
-    fig2 = m.plot_components(forecast)
-    st.write(fig2)
+            fig2 = m.plot_components(forecast)
+            st.write(fig2)
+        else:
+            st.warning("Not enough historical data for forecasting. Try another stock ticker.")
 
-    # Initial UI
+    # Ticker Input
     ticker = st.text_input('Ticker', "AAPL").upper()
     buttonClicked = st.button('Set')
 
-#n_years= st.slider("Years of prediction:", 1, 4)
-#period =n_years *365
-
-    START= "2010-01-01"
-    TODAY= datetime.date.today().strftime("%Y-%m-%d")
-
-    def get_data(ticker):
-       link = f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker}?"
-       modules = "modules=assetProfile%2Cprice%2CfinancialData%2CearningsTrend%2CdefaultKeyStatistics"
-       requestString = link + modules
-       
-       request = requests.get(requestString, headers={"USER-AGENT": "Mozilla/5.0"})
-       json_data = {}
-       try:
-          json_data = request.json()
-       except json.JSONDecodeError as e:
-          st.write("Error decoding JSON:", e)
-          st.write("Response content:", request.content)
-          return None
-          
-       #data = json_data.get("quoteSummary", {}).get("result", [])[0]
-       data = None
-       quote_summary = json_data.get("quoteSummary", {})
-       result = quote_summary.get("result", [])
-       if result:
-           data = result[0]
-       else:
-           st.write(f"No data available for ticker: {ticker}")
-
-       return data
+    # Function to Get Stock Details from Yahoo Finance
+    def get_stock_details(ticker):
+        url = f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker}?modules=assetProfile,price,financialData,earningsTrend,defaultKeyStatistics"
+        try:
+            response = requests.get(url, headers={"USER-AGENT": "Mozilla/5.0"})
+            response.raise_for_status()
+            json_data = response.json()
+            result = json_data.get("quoteSummary", {}).get("result", [])
+            return result[0] if result else None
+        except Exception as e:
+            st.error(f"Error fetching data: {e}")
+            return None
 
     if buttonClicked:
-       data = get_data(ticker)
-       if data is not None:
-          st.session_state.data = data
+        stock_data = get_stock_details(ticker)
+        if stock_data:
+            st.session_state.stock_data = stock_data
 
-    if 'data' in st.session_state:
-       data = st.session_state.data
-       st.header("Company Profile")
-       st.metric("Sector", data["assetProfile"]["sector"])
-       st.metric("Industry", data["assetProfile"]["industry"])
-       st.metric("Website", data["assetProfile"]["website"])
-       st.metric("Market Cap", data["price"]["marketCap"]["fmt"])
-       with st.expander("About Company"):
-          st.write(data["assetProfile"]["longBusinessSummary"])
-          
-          
-          
-          st.markdown("", unsafe_allow_html=True)
-          st.markdown("", unsafe_allow_html=True)  
-          
-          
-          st.header("Valuation")
-          currentPrice = data["financialData"]["currentPrice"]["raw"]
-          growth = data["earningsTrend"]["trend"][ 4 ][ "growth" ][ "raw" ] * 100
-          peFWD = data["defaultKeyStatistics"]["forwardPE"]["raw"]
-          epsFWD = data["defaultKeyStatistics"]["forwardEps"]["raw"]
-          requiredRateOfReturn = 10.0
-          yearsToProject = 5
-          
-          
-          
-          growth = st.number_input("Growth", value=growth, step = 1.0)
-          peFWD = st.number_input("P/E", value=peFWD, step = 1.0)
-          requiredRateOfReturn = st.number_input("Required Rate Of Return", value=requiredRateOfReturn, step = 1.0)
-          
-          
-          
-          futureEPS = fv(epsFWD,growth/100,yearsToProject)
-          futurePrice = futureEPS * peFWD 
-          stickerPrice = pv(futurePrice, requiredRateOfReturn, yearsToProject)
-          upside = (stickerPrice - currentPrice)/stickerPrice * 100
-          
-          
-          
-          st.metric("EPS", "{:.2f}".format(futureEPS))
-          st.metric("Future Price", "{:.2f}".format(futurePrice))
-          st.metric("Sticker Price", "{:.2f}".format(stickerPrice))
-          st.metric("Current Price", "{:.2f}".format(currentPrice))
-          st.metric("Upside", "{:.2f}".format(upside))
+    # Display Stock Data
+    if 'stock_data' in st.session_state:
+        stock_data = st.session_state.stock_data
+        st.header("Company Profile")
+        st.metric("Sector", stock_data["assetProfile"]["sector"])
+        st.metric("Industry", stock_data["assetProfile"]["industry"])
+        st.metric("Website", stock_data["assetProfile"]["website"])
+        st.metric("Market Cap", stock_data["price"]["marketCap"]["fmt"])
+
+        with st.expander("About Company"):
+            st.write(stock_data["assetProfile"]["longBusinessSummary"])
+
+        st.header("Valuation")
+        currentPrice = stock_data["financialData"]["currentPrice"]["raw"]
+        growth = stock_data["earningsTrend"]["trend"][4]["growth"]["raw"] * 100
+        peFWD = stock_data["defaultKeyStatistics"]["forwardPE"]["raw"]
+        epsFWD = stock_data["defaultKeyStatistics"]["forwardEps"]["raw"]
+        requiredRateOfReturn = 10.0
+        yearsToProject = 5
+
+        growth = st.number_input("Growth", value=growth, step=1.0)
+        peFWD = st.number_input("P/E", value=peFWD, step=1.0)
+        requiredRateOfReturn = st.number_input("Required Rate Of Return", value=requiredRateOfReturn, step=1.0)
+
+        futureEPS = fv(epsFWD, growth / 100, yearsToProject)
+        futurePrice = futureEPS * peFWD
+        stickerPrice = pv(futurePrice, requiredRateOfReturn, yearsToProject)
+        upside = (stickerPrice - currentPrice) / stickerPrice * 100
+
+        st.metric("EPS", "{:.2f}".format(futureEPS))
+        st.metric("Future Price", "{:.2f}".format(futurePrice))
+        st.metric("Sticker Price", "{:.2f}".format(stickerPrice))
+        st.metric("Current Price", "{:.2f}".format(currentPrice))
+        st.metric("Upside", "{:.2f}".format(upside))
+
 
 
 
