@@ -84,7 +84,6 @@ options = ['STOCK TREND FORECAST', 'ABOUT THE APP', 'PREDICTOR EXPLAINED']
 selected_option = st.sidebar.selectbox('Select an option', options)
 
 
-
 import streamlit as st
 import datetime
 import pandas as pd
@@ -131,19 +130,25 @@ if data is not None and not data.empty:
     # Display raw data
     st.subheader('Raw Data')
     try:
-        # Convert datetime columns to proper format and handle potential issues
-        data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
-        data = data.dropna()  # Drop rows with any NaT values in the 'Date' column
+        # Clean and handle datetime columns and missing data
+        data.columns = data.columns.str.strip()  # Clean column names by stripping extra spaces
+        data['Date'] = pd.to_datetime(data['Date'], errors='coerce')  # Ensure proper datetime format
+        data = data.dropna(subset=['Date', 'Close'])  # Drop rows with missing 'Date' or 'Close'
+
+        # Display the tail of the dataframe
         st.write(data.tail())
     except Exception as e:
         st.error(f"Error displaying data: {e}")
 
     # Closing Price vs Time Chart
     st.subheader('Closing Price vs Time Chart')
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], name='Stock Close'))
-    fig.layout.update(title_text="Time Series Data", xaxis_rangeslider_visible=True)
-    st.plotly_chart(fig)
+    try:
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], name='Stock Close'))
+        fig.layout.update(title_text="Time Series Data", xaxis_rangeslider_visible=True)
+        st.plotly_chart(fig)
+    except KeyError as e:
+        st.error(f"Error plotting the chart: {e}")
 
     # Closing Price vs Time Chart with 100-day Moving Average
     st.subheader('Closing Price vs Time Chart with 100 MA')
@@ -161,7 +166,29 @@ if data is not None and not data.empty:
     st.subheader('Closing Price vs Time Chart with 100MA & 200MA')
     if len(data) >= 200:
         ma100 = data['Close'].rolling(100).mean()
-        ma200 = data['Close'].rolling
+        ma200 = data['Close'].rolling(200).mean()
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=data['Date'], y=ma100, name='100-day Moving Average', line=dict(color='red')))
+        fig.add_trace(go.Scatter(x=data['Date'], y=ma200, name='200-day Moving Average', line=dict(color='blue')))
+        fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], name='Stock Close', line=dict(color='green')))
+        fig.layout.update(title_text="Time Series Data with 100-day & 200-day Moving Averages", xaxis_rangeslider_visible=True)
+        st.plotly_chart(fig)
+    else:
+        st.warning("Not enough data for 200-day Moving Average.")
+else:
+    st.error("No data available for the selected ticker.")
+
+
+
+
+
+
+
+
+
+
+
+
 
 
     
