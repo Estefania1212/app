@@ -90,7 +90,7 @@ import datetime
 import pandas as pd
 import yfinance as yf
 import plotly.graph_objects as go
-from fbprophet import Prophet
+from prophet import Prophet
 import requests
 
 # Function to fetch stock data
