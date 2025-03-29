@@ -88,16 +88,17 @@ selected_option = st.sidebar.selectbox('Select an option', options)
 import streamlit as st
 import datetime
 import pandas as pd
-import yfinance as yf
 import plotly.graph_objects as go
 from prophet import Prophet
+from yahooquery import Ticker
 import requests
 
 # Function to fetch stock data
 def get_data(ticker, start_date, end_date):
     try:
-        # Fetch data from Yahoo Finance (using yfinance)
-        data = yf.download(ticker, start=start_date, end=end_date)
+        # Fetch data from Yahoo Finance using yahooquery
+        stock = Ticker(ticker)
+        data = stock.history(start=start_date, end=end_date)
         if data.empty:
             return None
         data['Date'] = data.index  # Ensure the date column is in datetime format
@@ -112,19 +113,6 @@ def pv(fv, required_rate_of_return, years):
 
 def fv(pv, growth, years):
     return pv * (1 + growth) ** years
-
-# Function to Get Stock Details from Yahoo Finance
-def get_stock_details(ticker):
-    url = f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker}?modules=assetProfile,price,financialData,earningsTrend,defaultKeyStatistics"
-    try:
-        response = requests.get(url, headers={"USER-AGENT": "Mozilla/5.0"})
-        response.raise_for_status()
-        json_data = response.json()
-        result = json_data.get("quoteSummary", {}).get("result", [])
-        return result[0] if result else None
-    except Exception as e:
-        st.error(f"Error fetching data: {e}")
-        return None
 
 # Main content of the app
 st.title('Stock Market Predictor')
@@ -199,6 +187,19 @@ if data is not None and not data.empty:
 else:
     st.error(f"Failed to fetch data for {ticker}. Please check the ticker symbol and try again.")
 
+# Function to Get Stock Details from Yahoo Finance
+def get_stock_details(ticker):
+    url = f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker}?modules=assetProfile,price,financialData,earningsTrend,defaultKeyStatistics"
+    try:
+        response = requests.get(url, headers={"USER-AGENT": "Mozilla/5.0"})
+        response.raise_for_status()
+        json_data = response.json()
+        result = json_data.get("quoteSummary", {}).get("result", [])
+        return result[0] if result else None
+    except Exception as e:
+        st.error(f"Error fetching data: {e}")
+        return None
+
 # Ticker Input
 ticker = st.text_input('Ticker', "AAPL").upper()
 buttonClicked = st.button('Set')
@@ -214,30 +215,34 @@ if 'stock_data' in st.session_state:
     st.header("Company Profile")
     st.metric("Sector", stock_data["assetProfile"]["sector"])
     st.metric("Industry", stock_data["assetProfile"]["industry"])
+    st.metric("Website", stock_data["assetProfile"]["website"])
+    st.metric("Market Cap", stock_data["price"]["marketCap"]["fmt"])
 
+    with st.expander("About Company"):
+        st.write(stock_data["assetProfile"]["longBusinessSummary"])
 
+    st.header("Valuation")
+    currentPrice = stock_data["financialData"]["currentPrice"]["raw"]
+    growth = stock_data["earningsTrend"]["trend"][4]["growth"]["raw"] * 100
+    peFWD = stock_data["defaultKeyStatistics"]["forwardPE"]["raw"]
+    epsFWD = stock_data["defaultKeyStatistics"]["forwardEps"]["raw"]
+    requiredRateOfReturn = 10.0
+    yearsToProject = 5
 
+    growth = st.number_input("Growth", value=growth, step=1.0)
+    peFWD = st.number_input("P/E", value=peFWD, step=1.0)
+    requiredRateOfReturn = st.number_input("Required Rate Of Return", value=requiredRateOfReturn, step=1.0)
 
+    futureEPS = fv(epsFWD, growth / 100, yearsToProject)
+    futurePrice = futureEPS * peFWD
+    stickerPrice = pv(futurePrice, requiredRateOfReturn, yearsToProject)
+    upside = (stickerPrice - currentPrice) / stickerPrice * 100
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    st.metric("EPS", "{:.2f}".format(futureEPS))
+    st.metric("Future Price", "{:.2f}".format(futurePrice))
+    st.metric("Sticker Price", "{:.2f}".format(stickerPrice))
+    st.metric("Current Price", "{:.2f}".format(currentPrice))
+    st.metric("Upside", "{:.2f}".format(upside))
 
 
     
