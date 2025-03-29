@@ -177,6 +177,7 @@ if data is not None and not data.empty:
         st.warning("Not enough data for 200-day Moving Average.")
 else:
     st.error("No data available for the selected ticker.")
+    
 
 
 
@@ -194,7 +195,7 @@ else:
     
 
 # ABOUT section
-elif selected_option == 'ABOUT THE APP':
+if selected_option == 'ABOUT THE APP':
     st.sidebar.subheader('ABOUT THE APP')
     st.title('ABOUT THE APP')
 
