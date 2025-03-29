@@ -94,21 +94,6 @@ def get_data(ticker, start_date, end_date):
     return data
 
 
-from yahooquery import Ticker
-
-def get_stock_details(ticker):
-    try:
-        stock = Ticker(ticker)
-        info = stock.asset_profile
-        if not info:
-            st.warning("No data found for this ticker. Try another one.")
-            return None
-        return info
-    except Exception as e:
-        st.error(f"Error fetching data: {e}")
-        return None
-
-
 
 
 
