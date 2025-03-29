@@ -87,16 +87,16 @@ selected_option = st.sidebar.selectbox('Select an option', options)
 
 
 
-# Function to get stock data
-def get_data(ticker, start_date, end_date):
-    data = yf.download(ticker, start=start_date, end=end_date)
-    if data.empty:
-        st.error("No data found for the given stock ticker. Please try another ticker.")
-        return None
-    data.reset_index(inplace=True)
-    return data
 
 
+
+from yahooquery import Ticker
+
+# Fetch Apple stock data
+ticker = Ticker("AAPL")
+
+# Get stock summary
+print(ticker.summary_detail)
 
 
 
