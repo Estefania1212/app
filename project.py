@@ -102,6 +102,7 @@ def get_data(ticker, start_date, end_date):
         if data.empty:
             return None
         data['Date'] = data.index  # Ensure the date column is in datetime format
+        data.reset_index(drop=True, inplace=True)  # Reset index if needed
         return data
     except Exception as e:
         print(f"Error fetching data: {e}")
@@ -129,7 +130,13 @@ data = get_data(ticker, start_date, end_date)
 if data is not None and not data.empty:
     # Display raw data
     st.subheader('Raw Data')
-    st.write(data.tail())
+    try:
+        # Convert datetime columns to proper format and handle potential issues
+        data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
+        data = data.dropna()  # Drop rows with any NaT values in the 'Date' column
+        st.write(data.tail())
+    except Exception as e:
+        st.error(f"Error displaying data: {e}")
 
     # Closing Price vs Time Chart
     st.subheader('Closing Price vs Time Chart')
@@ -154,95 +161,7 @@ if data is not None and not data.empty:
     st.subheader('Closing Price vs Time Chart with 100MA & 200MA')
     if len(data) >= 200:
         ma100 = data['Close'].rolling(100).mean()
-        ma200 = data['Close'].rolling(200).mean()
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=data['Date'], y=ma100, name='100-day Moving Average', line=dict(color='red')))
-        fig.add_trace(go.Scatter(x=data['Date'], y=ma200, name='200-day Moving Average', line=dict(color='green')))
-        fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], name='Stock Close', line=dict(color='blue')))
-        fig.layout.update(title_text="Time Series Data with 100-day and 200-day Moving Averages", xaxis_rangeslider_visible=True)
-        st.plotly_chart(fig)
-    else:
-        st.warning("Not enough data for 200-day Moving Average.")
-
-    # Forecasting
-    if len(data) > 30:  # Ensuring at least 30 days of data before forecasting
-        n_years = st.sidebar.slider("Select the number of years to forecast:", 1, 4)
-        period = n_years * 365
-        df_train = data[['Date', 'Close']].rename(columns={"Date": "ds", "Close": "y"})
-        m = Prophet()
-        m.fit(df_train)
-        future = m.make_future_dataframe(periods=period)
-        forecast = m.predict(future)
-
-        st.subheader('Forecast Data')
-        st.write(forecast.tail())
-
-        fig1 = m.plot(forecast)
-        st.plotly_chart(fig1)
-
-        fig2 = m.plot_components(forecast)
-        st.write(fig2)
-    else:
-        st.warning("Not enough historical data for forecasting. Try another stock ticker.")
-else:
-    st.error(f"Failed to fetch data for {ticker}. Please check the ticker symbol and try again.")
-
-# Function to Get Stock Details from Yahoo Finance
-def get_stock_details(ticker):
-    url = f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker}?modules=assetProfile,price,financialData,earningsTrend,defaultKeyStatistics"
-    try:
-        response = requests.get(url, headers={"USER-AGENT": "Mozilla/5.0"})
-        response.raise_for_status()
-        json_data = response.json()
-        result = json_data.get("quoteSummary", {}).get("result", [])
-        return result[0] if result else None
-    except Exception as e:
-        st.error(f"Error fetching data: {e}")
-        return None
-
-# Ticker Input
-ticker = st.text_input('Ticker', "AAPL").upper()
-buttonClicked = st.button('Set')
-
-if buttonClicked:
-    stock_data = get_stock_details(ticker)
-    if stock_data:
-        st.session_state.stock_data = stock_data
-
-# Display Stock Data
-if 'stock_data' in st.session_state:
-    stock_data = st.session_state.stock_data
-    st.header("Company Profile")
-    st.metric("Sector", stock_data["assetProfile"]["sector"])
-    st.metric("Industry", stock_data["assetProfile"]["industry"])
-    st.metric("Website", stock_data["assetProfile"]["website"])
-    st.metric("Market Cap", stock_data["price"]["marketCap"]["fmt"])
-
-    with st.expander("About Company"):
-        st.write(stock_data["assetProfile"]["longBusinessSummary"])
-
-    st.header("Valuation")
-    currentPrice = stock_data["financialData"]["currentPrice"]["raw"]
-    growth = stock_data["earningsTrend"]["trend"][4]["growth"]["raw"] * 100
-    peFWD = stock_data["defaultKeyStatistics"]["forwardPE"]["raw"]
-    epsFWD = stock_data["defaultKeyStatistics"]["forwardEps"]["raw"]
-    requiredRateOfReturn = 10.0
-    yearsToProject = 5
-
-    growth = st.number_input("Growth", value=growth, step=1.0)
-    peFWD = st.number_input("P/E", value=peFWD, step=1.0)
-    requiredRateOfReturn = st.number_input("Required Rate Of Return", value=requiredRateOfReturn, step=1.0)
-
-    futureEPS = fv(epsFWD, growth / 100, yearsToProject)
-    futurePrice = futureEPS * peFWD
-    stickerPrice = pv(futurePrice, requiredRateOfReturn, yearsToProject)
-    upside = (stickerPrice - currentPrice) / stickerPrice * 100
-
-    st.metric("EPS", "{:.2f}".format(futureEPS))
-    st.metric("Future Price", "{:.2f}".format(futurePrice))
-    st.metric("Sticker Price", "{:.2f}".format(stickerPrice))
-    st.metric("Current Price", "{:.2f}".format(currentPrice))
-    st.metric("Upside", "{:.2f}".format(upside))
+        ma200 = data['Close'].rolling
 
 
     
