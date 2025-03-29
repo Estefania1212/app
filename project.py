@@ -146,19 +146,7 @@ def fv(pv, growth, years):
 if selected_option == 'STOCK TREND FORECAST':
     st.sidebar.subheader('STOCK TREND FORECAST')
 
-    # Main content
-    st.title('Stock Market Predictor')
-
-    # Get user input from the sidebar
-    ticker = st.sidebar.text_input("Enter a stock ticker symbol (e.g. AAPL):", "AAPL")
-    start_date = (datetime.datetime.now() - datetime.timedelta(days=365)).strftime("%Y-%m-%d")
-    end_date = datetime.datetime.now().strftime("%Y-%m-%d")
-    data = get_data(ticker, start_date, end_date)
-
-    if data is not None and not data.empty:
-        # Display raw data
-        st.subheader('Raw Data')
-        st.write(data.tail())
+   
 
         # Closing Price vs Time Chart
         st.subheader('Closing Price vs Time Chart')
