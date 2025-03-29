@@ -93,11 +93,12 @@ selected_option = st.sidebar.selectbox('Select an option', options)
 from yahooquery import Ticker
 def get_data(ticker, start_date, end_date):
     ticker = Ticker("AAPL")
+    print(ticker.summary_detail)
 # Fetch Apple stock data
 
 
 # Get stock summary
-print(ticker.summary_detail)
+
 
 
 
