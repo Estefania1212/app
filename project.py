@@ -85,19 +85,36 @@ selected_option = st.sidebar.selectbox('Select an option', options)
 
 
 
-
-
-
-
-
 from yahooquery import Ticker
-def get_data(ticker, start_date, end_date):
-    ticker = Ticker("AAPL")
-    print(ticker.summary_detail)
-# Fetch Apple stock data
+import requests
+
+# Define the function to fetch data
+def get_data(ticker_symbol, start_date, end_date):
+    try:
+        # Create a session with headers
+        session = requests.Session()
+        session.headers.update({"User-Agent": "Mozilla/5.0"})
+
+        # Initialize Ticker object with a custom session
+        ticker = Ticker(ticker_symbol, session=session)
+
+        # Fetch the summary detail (or any other data like price, etc.)
+        data = ticker.summary_detail
+
+        # You can add more data logic here (such as filtering for specific data)
+        print(data)
+
+    except Exception as e:
+        print(f"Error fetching data: {e}")
+
+# Call the function with the ticker and dates
+get_data('AAPL', '2020-01-01', '2023-12-31')
 
 
-# Get stock summary
+
+
+
+
 
 
 
