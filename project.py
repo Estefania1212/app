@@ -93,17 +93,22 @@ def get_data(ticker, start_date, end_date):
     data.reset_index(inplace=True)
     return data
 
-import yfinance as yf
+
+from yahooquery import Ticker
 
 def get_stock_details(ticker):
     try:
-        stock = yf.Ticker(ticker)
-        info = stock.info
+        stock = Ticker(ticker)
+        info = stock.asset_profile
+        if not info:
+            st.warning("No data found for this ticker. Try another one.")
+            return None
         return info
     except Exception as e:
-        return f"Error fetching data: {e}"
+        st.error(f"Error fetching data: {e}")
+        return None
 
-stock_data = get_stock_details("AAPL")
+
 
 
 
