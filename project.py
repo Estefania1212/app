@@ -84,31 +84,37 @@ options = ['STOCK TREND FORECAST', 'ABOUT THE APP', 'PREDICTOR EXPLAINED']
 selected_option = st.sidebar.selectbox('Select an option', options)
 
 
-
 from yahooquery import Ticker
 import requests
 
 # Define the function to fetch data
 def get_data(ticker_symbol, start_date, end_date):
     try:
+        # Set headers to avoid getting blocked
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+
         # Create a session with headers
         session = requests.Session()
-        session.headers.update({"User-Agent": "Mozilla/5.0"})
+        session.headers.update(headers)
 
         # Initialize Ticker object with a custom session
         ticker = Ticker(ticker_symbol, session=session)
 
-        # Fetch the summary detail (or any other data like price, etc.)
+        # Fetch summary data
         data = ticker.summary_detail
-
-        # You can add more data logic here (such as filtering for specific data)
-        print(data)
+        if data:
+            print(data)
+        else:
+            print(f"No data found for {ticker_symbol}")
 
     except Exception as e:
         print(f"Error fetching data: {e}")
 
 # Call the function with the ticker and dates
-get_data('AAPL', '2020-01-01', '2023-12-31')
+get_data('AAPL', '2020-01-01', '2025-12-31')
+
 
 
 
