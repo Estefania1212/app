@@ -94,6 +94,35 @@ def get_data(ticker, start_date, end_date):
     return data
 
 
+import yfinance as yf
+
+def get_stock_details(ticker):
+    try:
+        stock = yf.Ticker(ticker)
+        info = stock.info  # Fetch general stock info
+
+        return {
+            "sector": info.get("sector", "N/A"),
+            "industry": info.get("industry", "N/A"),
+            "website": info.get("website", "N/A"),
+            "marketCap": info.get("marketCap", "N/A"),
+            "summary": info.get("longBusinessSummary", "N/A"),
+            "currentPrice": info.get("currentPrice", "N/A"),
+            "growth": info.get("earningsGrowth", "N/A"),
+            "forwardPE": info.get("forwardPE", "N/A"),
+            "forwardEPS": info.get("forwardEps", "N/A"),
+        }
+    except Exception as e:
+        print(f"Error fetching data: {e}")
+        return None
+
+# Example usage:
+stock_data = get_stock_details("AAPL")
+print(stock_data)
+
+
+
+
 
 
 
