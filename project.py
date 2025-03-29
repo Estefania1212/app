@@ -95,30 +95,17 @@ def get_data(ticker, start_date, end_date):
 
 
 import yfinance as yf
+import requests
 
-def get_stock_details(ticker):
-    try:
-        stock = yf.Ticker(ticker)
-        info = stock.info  # Fetch general stock info
+# Create a session and add headers
+session = requests.Session()
+session.headers.update({"User-Agent": "Mozilla/5.0"})
 
-        return {
-            "sector": info.get("sector", "N/A"),
-            "industry": info.get("industry", "N/A"),
-            "website": info.get("website", "N/A"),
-            "marketCap": info.get("marketCap", "N/A"),
-            "summary": info.get("longBusinessSummary", "N/A"),
-            "currentPrice": info.get("currentPrice", "N/A"),
-            "growth": info.get("earningsGrowth", "N/A"),
-            "forwardPE": info.get("forwardPE", "N/A"),
-            "forwardEPS": info.get("forwardEps", "N/A"),
-        }
-    except Exception as e:
-        print(f"Error fetching data: {e}")
-        return None
+# Fetch stock data with the session
+ticker = "AAPL"
+stock = yf.Ticker(ticker, session=session)
+print(stock.info)  # Fetch stock details
 
-# Example usage:
-stock_data = get_stock_details("AAPL")
-print(stock_data)
 
 
 
