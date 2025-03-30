@@ -93,42 +93,42 @@ from yahooquery import Ticker
 import requests
 
 
+
 import streamlit as st
 import pandas as pd
 import datetime
-import plotly.graph_objs as go
 from yahooquery import Ticker
+from prophet import Prophet
+import plotly.graph_objects as go
 
 # Function to fetch stock data
 def get_data(ticker, start_date, end_date):
     try:
         stock = Ticker(ticker)
         data = stock.history(start=start_date, end=end_date)
-        
-        # Check if data is valid
-        if data is None or data.empty:
+        if data.empty:
             return None
-        
-        # Handle MultiIndex issue (YahooQuery sometimes returns MultiIndex)
-        if isinstance(data.index, pd.MultiIndex):
-            data = data.reset_index()
-
-        # Print column names for debugging
-        print("Columns in Data:", data.columns)
-        
-        # Rename column if necessary (lowercase issue)
-        if 'close' in data.columns:
-            data.rename(columns={'close': 'Close'}, inplace=True)
-
-        data['Date'] = pd.to_datetime(data['date'], errors='coerce')  # Ensure Date column
-        data.dropna(subset=['Date', 'Close'], inplace=True)  # Remove rows with missing values
-        
+        data = data.reset_index()  # Reset index
         return data
     except Exception as e:
-        print(f"Error fetching data: {e}")
+        st.error(f"Error fetching data: {e}")
         return None
 
-# Streamlit UI
+# Function to predict stock prices using Prophet
+def predict_stock_price(data, days=30):
+    df = data[['date', 'close']].rename(columns={'date': 'ds', 'close': 'y'})
+
+    # Train Prophet model
+    model = Prophet()
+    model.fit(df)
+
+    # Make future predictions
+    future = model.make_future_dataframe(periods=days)
+    forecast = model.predict(future)
+
+    return forecast
+
+# Streamlit App
 st.title('Stock Market Predictor')
 
 # Get user input
@@ -136,49 +136,38 @@ ticker = st.sidebar.text_input("Enter a stock ticker symbol (e.g. AAPL):", "AAPL
 start_date = (datetime.datetime.now() - datetime.timedelta(days=365)).strftime("%Y-%m-%d")
 end_date = datetime.datetime.now().strftime("%Y-%m-%d")
 
-# Fetch data
+# Fetch stock data
 data = get_data(ticker, start_date, end_date)
 
-# Display raw data
-if data is not None and 'Close' in data.columns:
+if data is not None and not data.empty:
     st.subheader('Raw Data')
     st.write(data.tail())
 
-    # Closing Price vs Time Chart
-    st.subheader('Closing Price vs Time Chart')
+    # Closing Price Chart
+    st.subheader('Closing Price vs Time')
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], name='Stock Close'))
-    fig.layout.update(title_text="Time Series Data", xaxis_rangeslider_visible=True)
+    fig.add_trace(go.Scatter(x=data['date'], y=data['close'], name='Stock Close'))
+    fig.layout.update(title_text="Stock Price Over Time", xaxis_rangeslider_visible=True)
     st.plotly_chart(fig)
 
-    # Closing Price with 100-day Moving Average
-    if len(data) >= 100:
-        st.subheader('Closing Price vs Time Chart with 100 MA')
-        ma100 = data['Close'].rolling(100).mean()
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=data['Date'], y=ma100, name='100-day Moving Average', line=dict(color='red')))
-        fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], name='Stock Close', line=dict(color='green')))
-        fig.layout.update(title_text="Time Series Data with 100-day Moving Average", xaxis_rangeslider_visible=True)
-        st.plotly_chart(fig)
-    else:
-        st.warning("Not enough data for 100-day Moving Average.")
+    # Prediction Section
+    st.subheader('Stock Price Prediction')
 
-    # Closing Price with 100-day & 200-day Moving Averages
-    if len(data) >= 200:
-        st.subheader('Closing Price vs Time Chart with 100MA & 200MA')
-        ma100 = data['Close'].rolling(100).mean()
-        ma200 = data['Close'].rolling(200).mean()
+    try:
+        forecast = predict_stock_price(data)
+
+        # Plot prediction
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=data['Date'], y=ma100, name='100-day Moving Average', line=dict(color='red')))
-        fig.add_trace(go.Scatter(x=data['Date'], y=ma200, name='200-day Moving Average', line=dict(color='blue')))
-        fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], name='Stock Close', line=dict(color='green')))
-        fig.layout.update(title_text="Time Series Data with 100-day & 200-day Moving Averages", xaxis_rangeslider_visible=True)
+        fig.add_trace(go.Scatter(x=data['date'], y=data['close'], name='Historical Data', line=dict(color='blue')))
+        fig.add_trace(go.Scatter(x=forecast['ds'], y=forecast['yhat'], name='Predicted Price', line=dict(color='red')))
+        fig.layout.update(title_text="Stock Price Prediction", xaxis_rangeslider_visible=True)
         st.plotly_chart(fig)
-    else:
-        st.warning("Not enough data for 200-day Moving Average.")
+
+    except Exception as e:
+        st.error(f"Error generating prediction: {e}")
+
 else:
-    st.error("No valid data available for the selected ticker.")
-
+    st.error("No data available for the selected ticker.")
 
 
 
