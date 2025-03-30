@@ -13,7 +13,7 @@ from datetime import datetime
 import pandas_datareader as pdr
 import matplotlib.pyplot as plt
 
-st.set_page_config(page_title='Stock Price Analysis', page_icon=':chart_with_upwards_trend:')
+#st.set_page_config(page_title='Stock Price Analysis', page_icon=':chart_with_upwards_trend:')
 
 import yfinance as yf
 import datetime
