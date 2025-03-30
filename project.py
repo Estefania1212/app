@@ -97,77 +97,108 @@ import requests
 import streamlit as st
 import pandas as pd
 import datetime
+import plotly.graph_objs as go
 from yahooquery import Ticker
 from prophet import Prophet
-import plotly.graph_objects as go
 
 # Function to fetch stock data
 def get_data(ticker, start_date, end_date):
     try:
         stock = Ticker(ticker)
         data = stock.history(start=start_date, end=end_date)
-        if data.empty:
+        
+        if data is None or data.empty:
             return None
-        data = data.reset_index()  # Reset index
+        
+        if isinstance(data.index, pd.MultiIndex):
+            data = data.reset_index()
+
+        if 'close' in data.columns:
+            data.rename(columns={'close': 'Close'}, inplace=True)
+
+        data['Date'] = pd.to_datetime(data['date'], errors='coerce')
+        data.dropna(subset=['Date', 'Close'], inplace=True)
+        
         return data
     except Exception as e:
-        st.error(f"Error fetching data: {e}")
+        print(f"Error fetching data: {e}")
         return None
 
 # Function to predict stock prices using Prophet
 def predict_stock_price(data, days=30):
-    df = data[['date', 'close']].rename(columns={'date': 'ds', 'close': 'y'})
-
-    # Train Prophet model
+    df = data[['Date', 'Close']].rename(columns={'Date': 'ds', 'Close': 'y'})
+    
     model = Prophet()
     model.fit(df)
-
-    # Make future predictions
+    
     future = model.make_future_dataframe(periods=days)
     forecast = model.predict(future)
-
+    
     return forecast
 
-# Streamlit App
+# Streamlit UI
 st.title('Stock Market Predictor')
 
-# Get user input
 ticker = st.sidebar.text_input("Enter a stock ticker symbol (e.g. AAPL):", "AAPL")
 start_date = (datetime.datetime.now() - datetime.timedelta(days=365)).strftime("%Y-%m-%d")
 end_date = datetime.datetime.now().strftime("%Y-%m-%d")
 
-# Fetch stock data
 data = get_data(ticker, start_date, end_date)
 
-if data is not None and not data.empty:
+if data is not None and 'Close' in data.columns:
     st.subheader('Raw Data')
     st.write(data.tail())
-
-    # Closing Price Chart
-    st.subheader('Closing Price vs Time')
+    
+    st.subheader('Closing Price vs Time Chart')
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=data['date'], y=data['close'], name='Stock Close'))
-    fig.layout.update(title_text="Stock Price Over Time", xaxis_rangeslider_visible=True)
+    fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], name='Stock Close'))
+    fig.layout.update(title_text="Time Series Data", xaxis_rangeslider_visible=True)
     st.plotly_chart(fig)
-
-    # Prediction Section
+    
+    if len(data) >= 100:
+        st.subheader('Closing Price vs Time Chart with 100 MA')
+        ma100 = data['Close'].rolling(100).mean()
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=data['Date'], y=ma100, name='100-day Moving Average', line=dict(color='red')))
+        fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], name='Stock Close', line=dict(color='green')))
+        fig.layout.update(title_text="Time Series Data with 100-day Moving Average", xaxis_rangeslider_visible=True)
+        st.plotly_chart(fig)
+    
+    if len(data) >= 200:
+        st.subheader('Closing Price vs Time Chart with 100MA & 200MA')
+        ma100 = data['Close'].rolling(100).mean()
+        ma200 = data['Close'].rolling(200).mean()
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=data['Date'], y=ma100, name='100-day Moving Average', line=dict(color='red')))
+        fig.add_trace(go.Scatter(x=data['Date'], y=ma200, name='200-day Moving Average', line=dict(color='blue')))
+        fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], name='Stock Close', line=dict(color='green')))
+        fig.layout.update(title_text="Time Series Data with 100-day & 200-day Moving Averages", xaxis_rangeslider_visible=True)
+        st.plotly_chart(fig)
+    
+    # Prophet Prediction
     st.subheader('Stock Price Prediction')
-
     try:
         forecast = predict_stock_price(data)
-
-        # Plot prediction
+        
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=data['date'], y=data['close'], name='Historical Data', line=dict(color='blue')))
+        fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], name='Historical Data', line=dict(color='blue')))
         fig.add_trace(go.Scatter(x=forecast['ds'], y=forecast['yhat'], name='Predicted Price', line=dict(color='red')))
         fig.layout.update(title_text="Stock Price Prediction", xaxis_rangeslider_visible=True)
         st.plotly_chart(fig)
-
+        
+        # Trend Analysis
+        last_actual_price = data['Close'].iloc[-1]
+        last_predicted_price = forecast['yhat'].iloc[-1]
+        
+        if last_predicted_price > last_actual_price:
+            st.success("📈 The stock price is likely to go UP based on predictions.")
+        else:
+            st.error("📉 The stock price is likely to go DOWN based on predictions.")
+    
     except Exception as e:
         st.error(f"Error generating prediction: {e}")
-
 else:
-    st.error("No data available for the selected ticker.")
+    st.error("No valid data available for the selected ticker.")
 
 
 
