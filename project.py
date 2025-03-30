@@ -92,67 +92,68 @@ from prophet import Prophet
 from yahooquery import Ticker
 import requests
 
+
+import streamlit as st
+import pandas as pd
+import datetime
+import plotly.graph_objs as go
+from yahooquery import Ticker
+
 # Function to fetch stock data
 def get_data(ticker, start_date, end_date):
     try:
-        # Fetch data from Yahoo Finance using yahooquery
         stock = Ticker(ticker)
         data = stock.history(start=start_date, end=end_date)
-        if data.empty:
+        
+        # Check if data is valid
+        if data is None or data.empty:
             return None
-        data['Date'] = data.index  # Ensure the date column is in datetime format
-        data.reset_index(drop=True, inplace=True)  # Reset index if needed
+        
+        # Handle MultiIndex issue (YahooQuery sometimes returns MultiIndex)
+        if isinstance(data.index, pd.MultiIndex):
+            data = data.reset_index()
+
+        # Print column names for debugging
+        print("Columns in Data:", data.columns)
+        
+        # Rename column if necessary (lowercase issue)
+        if 'close' in data.columns:
+            data.rename(columns={'close': 'Close'}, inplace=True)
+
+        data['Date'] = pd.to_datetime(data['date'], errors='coerce')  # Ensure Date column
+        data.dropna(subset=['Date', 'Close'], inplace=True)  # Remove rows with missing values
+        
         return data
     except Exception as e:
         print(f"Error fetching data: {e}")
         return None
 
-# Present Value & Future Value Functions
-def pv(fv, required_rate_of_return, years):
-    return fv / ((1 + required_rate_of_return / 100) ** years)
-
-def fv(pv, growth, years):
-    return pv * (1 + growth) ** years
-
-# Main content of the app
+# Streamlit UI
 st.title('Stock Market Predictor')
 
-# Get user input from the sidebar
+# Get user input
 ticker = st.sidebar.text_input("Enter a stock ticker symbol (e.g. AAPL):", "AAPL")
 start_date = (datetime.datetime.now() - datetime.timedelta(days=365)).strftime("%Y-%m-%d")
 end_date = datetime.datetime.now().strftime("%Y-%m-%d")
 
-# Get the stock data
+# Fetch data
 data = get_data(ticker, start_date, end_date)
 
-# Check if data is valid
-if data is not None and not data.empty:
-    # Display raw data
+# Display raw data
+if data is not None and 'Close' in data.columns:
     st.subheader('Raw Data')
-    try:
-        # Clean and handle datetime columns and missing data
-        data.columns = data.columns.str.strip()  # Clean column names by stripping extra spaces
-        data['Date'] = pd.to_datetime(data['Date'], errors='coerce')  # Ensure proper datetime format
-        data = data.dropna(subset=['Date', 'Close'])  # Drop rows with missing 'Date' or 'Close'
-
-        # Display the tail of the dataframe
-        st.write(data.tail())
-    except Exception as e:
-        st.error(f"Error displaying data: {e}")
+    st.write(data.tail())
 
     # Closing Price vs Time Chart
     st.subheader('Closing Price vs Time Chart')
-    try:
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], name='Stock Close'))
-        fig.layout.update(title_text="Time Series Data", xaxis_rangeslider_visible=True)
-        st.plotly_chart(fig)
-    except KeyError as e:
-        st.error(f"Error plotting the chart: {e}")
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], name='Stock Close'))
+    fig.layout.update(title_text="Time Series Data", xaxis_rangeslider_visible=True)
+    st.plotly_chart(fig)
 
-    # Closing Price vs Time Chart with 100-day Moving Average
-    st.subheader('Closing Price vs Time Chart with 100 MA')
+    # Closing Price with 100-day Moving Average
     if len(data) >= 100:
+        st.subheader('Closing Price vs Time Chart with 100 MA')
         ma100 = data['Close'].rolling(100).mean()
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=data['Date'], y=ma100, name='100-day Moving Average', line=dict(color='red')))
@@ -162,9 +163,9 @@ if data is not None and not data.empty:
     else:
         st.warning("Not enough data for 100-day Moving Average.")
 
-    # Closing Price vs Time Chart with 100-day & 200-day Moving Averages
-    st.subheader('Closing Price vs Time Chart with 100MA & 200MA')
+    # Closing Price with 100-day & 200-day Moving Averages
     if len(data) >= 200:
+        st.subheader('Closing Price vs Time Chart with 100MA & 200MA')
         ma100 = data['Close'].rolling(100).mean()
         ma200 = data['Close'].rolling(200).mean()
         fig = go.Figure()
@@ -176,9 +177,7 @@ if data is not None and not data.empty:
     else:
         st.warning("Not enough data for 200-day Moving Average.")
 else:
-    st.error("No data available for the selected ticker.")
-    
-
+    st.error("No valid data available for the selected ticker.")
 
 
 
