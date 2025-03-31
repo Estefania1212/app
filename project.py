@@ -94,28 +94,29 @@ import requests
 
 
 
-import streamlit as st
-import pandas as pd
+
 import datetime
-import plotly.graph_objs as go
+import pandas as pd
+import streamlit as st
+import plotly.graph_objects as go
 from yahooquery import Ticker
-from prophet import Prophet
+from fbprophet import Prophet
 
 # Function to fetch stock data
-def get_data(ticker, start_date, end_date):
+def get_data(ticker, start_date):
     try:
         stock = Ticker(ticker)
-        data = stock.history(start=start_date, end=end_date)
+        data = stock.history(start=start_date)
         
         if data is None or data.empty:
             return None
         
         if isinstance(data.index, pd.MultiIndex):
             data = data.reset_index()
-
+        
         if 'close' in data.columns:
             data.rename(columns={'close': 'Close'}, inplace=True)
-
+        
         data['Date'] = pd.to_datetime(data['date'], errors='coerce')
         data.dropna(subset=['Date', 'Close'], inplace=True)
         
@@ -141,9 +142,9 @@ st.title('Stock Market Predictor')
 
 ticker = st.sidebar.text_input("Enter a stock ticker symbol (e.g. AAPL):", "AAPL")
 start_date = (datetime.datetime.now() - datetime.timedelta(days=365)).strftime("%Y-%m-%d")
-end_date = datetime.datetime.now().strftime("%Y-%m-%d")
 
-data = get_data(ticker, start_date, end_date)
+# Fetch latest stock data
+data = get_data(ticker, start_date)
 
 if data is not None and 'Close' in data.columns:
     st.subheader('Raw Data')
@@ -199,8 +200,6 @@ if data is not None and 'Close' in data.columns:
         st.error(f"Error generating prediction: {e}")
 else:
     st.error("No valid data available for the selected ticker.")
-
-
 
 
 
