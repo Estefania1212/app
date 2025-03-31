@@ -100,7 +100,7 @@ import pandas as pd
 import streamlit as st
 import plotly.graph_objects as go
 from yahooquery import Ticker
-from fbprophet import Prophet
+from prophet import Prophet
 
 # Function to fetch stock data
 def get_data(ticker, start_date):
