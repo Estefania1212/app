@@ -128,7 +128,8 @@ def get_data(ticker, start_date):
 # Function to predict stock prices using Prophet
 def predict_stock_price(data, days=30):
     df = data[['Date', 'Close']].rename(columns={'Date': 'ds', 'Close': 'y'})
-    
+     # Remove timezone from ds column
+    df['ds'] = df['ds'].dt.tz_localize(None)
     model = Prophet()
     model.fit(df)
     
